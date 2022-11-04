@@ -1,0 +1,463 @@
+import React, { useState, useRef, useEffect, createRef } from 'react';
+import {
+    View,
+    StyleSheet,
+    Image,
+    SafeAreaView,
+    Text,
+    TouchableOpacity,
+    ScrollView,
+    FlatList,
+    TextInput,
+    Button
+} from 'react-native';
+import { SvgXml } from 'react-native-svg';
+import { BackButton } from '../../../assests/svgfiles/svgFiles';
+import AppBackGroundImage from '../../common/BackgroundImage';
+import { Card } from 'react-native-paper';
+import IonIcon from 'react-native-vector-icons/Ionicons';
+import Entypo from 'react-native-vector-icons/Entypo';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+// import Popover, { Rect, PopoverPlacement, PopoverMode } from 'react-native-popover-view';
+import { GlobalFont } from '../../../utils/FontFamily';
+import { useDispatch, useSelector } from 'react-redux';
+import { getMyPostsData } from '../../../redux/Actions/getMyPostService';
+import Spinner from 'react-native-loading-spinner-overlay';
+import { SwipeablePanel } from 'rn-swipeable-panel';
+import Feather from 'react-native-vector-icons/Feather';
+import { commentPostData, likePostData } from '../../../redux/Actions/getFeedPostService';
+import { responsiveHeight, responsiveScreenHeight, responsiveScreenWidth, responsiveWidth } from 'react-native-responsive-dimensions';
+import moment from "moment"
+import { DeletePost } from '../../../redux/Actions/createPostService';
+import Video from 'react-native-video';
+import { Menu, MenuItem, } from 'react-native-material-menu';
+import { Tooltip } from 'react-native-elements';
+// import { Tooltip } from "@rneui/themed";
+// import { Popover, usePopover } from 'react-native-modal-popover';
+
+const Posts = ({ navigation, route }) => {
+    const [loading, setLoading] = useState(false)
+    const [ref, setRef] = useState(null)
+    const [dataSourceCords, setDataSourceCords] = useState([])
+    const [scrollToIndex, setScrollToIndex] = useState(0)
+    const [commentText, setCommentText] = useState('');
+    const [commentId, setCommentId] = useState("");
+    const [panelProps, setPanelProps] = useState({
+        fullWidth: false,
+        openLarge: false,
+        showCloseButton: true,
+        onClose: () => closePanel(),
+        onPressCloseButton: () => closePanel(),
+    });
+    const [dataComments, setDataComments] = useState([])
+    const [isPanelActive, setIsPanelActive] = useState(false);
+    const [showPopover, setShowPopover] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const touchable = useRef();
+
+    const { index } = route.params
+
+    const dispatch = useDispatch()
+
+    const { MyAllPost } = useSelector((state) => {
+        return {
+            MyAllPost: state.myPosts.data,
+        }
+    })
+
+    console.log("MyAllPost", MyAllPost);
+
+    // const [visible, setVisible] = useState(false);
+
+    const openPanel = (id) => {
+        setCommentId(id)
+        setCommentText('')
+        setIsPanelActive(true);
+    };
+
+    const closePanel = () => {
+        setIsPanelActive(false);
+    };
+
+    const _onComment = async () => {
+        setLoading(true)
+        const comment = await dispatch(commentPostData({ postId: commentId, commentText: commentText }))
+        console.log("comment", comment);
+        if (comment) {
+            dispatch(getMyPostsData())
+            setLoading(false)
+        }
+        if (comment.status === 200) {
+            setCommentId('')
+            setIsPanelActive(false)
+            setLoading(false)
+        }
+    }
+
+    const _onDelete = async (id) => {
+        setLoading(true)
+        const res = await dispatch(DeletePost({ postId: id }))
+        // setShowPopover(false)
+        console.log(res, "_onDelete");
+        if (res) {
+            dispatch(getMyPostsData())
+        }
+        setLoading(false)
+        // setShowPopover(false)
+    }
+
+    const _onLike = async (id, islike) => {
+        setLoading(true)
+        let status = true
+        if (islike) {
+            status = false
+        }
+        const res = await dispatch(likePostData({ postId: id, status: status }))
+        console.log(res, "res");
+        if (res) {
+            dispatch(getMyPostsData())
+        }
+        setLoading(false)
+    }
+
+    useEffect(() => {
+        console.log('dataSourceCords.length > index', dataSourceCords.length > index, dataSourceCords.length)
+
+        // if (dataSourceCords.length > index) {
+        //     ref?.scrollTo({
+        //         x: 0,
+        //         y: dataSourceCords[index - 1],
+        //         animation: true
+        //     })
+        // }
+        async function myAllPostData() {
+            console.log("myAllPostData")
+            setLoading(true)
+            const getPostsResponse = await dispatch(getMyPostsData())
+            if (getPostsResponse) {
+                setLoading(false)
+            }
+        }
+        myAllPostData()
+    }, [])
+
+    let _menu = {}
+
+    const hideMenu = (index) => {
+        console.log("hide-index", index);
+        _menu[index].hide()
+    }
+
+    const showMenu = (index) => {
+        _menu[index].show()
+    };
+
+    const displayDropdown = (item, index) => {
+        return (
+            <Menu
+                ref={(menu) => { _menu[index] = menu }}
+                onRequestClose={() => hideMenu(index)}
+                // style={{ width: responsiveScreenWidth(33), marginTop: 20 }}
+                anchor={<Entypo name="dots-three-horizontal" onPress={() => showMenu(index)} size={18} color={'grey'} />}>
+                <MenuItem onPress={() => {
+                    hideMenu(index), navigation.navigate('AllNavigation', {
+                        screen: 'CreateNewPost', params: { data: item, message: "edit" },
+                    })
+                }}>
+                    <View style={{ flexDirection: 'row', padding: 10 }}>
+                        <Icon name="pencil" size={14} color="black" />
+                        <Text style={{ fontSize: 12, marginLeft: 8, fontFamily: `${GlobalFont}` }}>Edit Post</Text>
+                    </View></MenuItem>
+                <MenuItem onPress={() => {
+                    hideMenu(index);
+                    _onDelete(item._id)
+                }}>
+                    <View style={{ flexDirection: 'row', padding: 10 }}>
+                        <FontAwesome5 name="trash" size={12} color="black" />
+                        <Text style={{ fontSize: 12, marginLeft: 8, fontFamily: `${GlobalFont}` }}>Delete Post</Text>
+                    </View>
+                </MenuItem>
+                <MenuItem onPress={() => hideMenu(index)}>
+                    <View style={{ flexDirection: 'row', padding: 10 }}>
+                        <FontAwesome5 name="user-slash" size={12} color="black" />
+                        <Text style={{ fontSize: 12, marginLeft: 2, fontFamily: `${GlobalFont}` }}>Report User</Text>
+                    </View>
+                </MenuItem>
+            </Menu>
+        )
+    }
+
+    const renderMyAllPost = (item, index) => {
+        console.log("createdBy", item);
+        return (
+            <Card style={{ borderRadius: 10, marginBottom: 10 }}>
+                <View
+                    style={{ padding: 15 }}
+                >
+                    <View style={{ flexDirection: 'row' }}>
+                        <Image
+                            source={{ uri: 'https://d2tlu2bncpo1ch.cloudfront.net/' + `${item?.createdBy?.profileImage}` }}
+                            style={{
+                                height: 50,
+                                width: 50,
+                                borderRadius: 10,
+                                marginRight: 10,
+                            }} />
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                width: '80%',
+                            }}>
+                            <View style={{ justifyContent: 'center' }}>
+                                <Text style={{ fontFamily: `${GlobalFont}` }}>{item.createdBy.firstName} {''} {item.createdBy.lastName}</Text>
+                                <Text style={{ color: 'grey', fontSize: 10, marginTop: 4, fontFamily: `${GlobalFont}` }}>
+                                    {moment(item.createdAt).format("DD/MM/YYYY, hh:mm A")}
+                                </Text>
+                            </View>
+                            <View>
+                                <View>
+                                    {displayDropdown(item, index)}
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                    <Text style={{ fontWeight: 'bold', marginVertical: 5, fontFamily: `${GlobalFont}` }}>
+                        {item.postName}
+                    </Text>
+                    <Text style={{ color: 'grey', fontSize: 10, fontFamily: `${GlobalFont}` }}>
+                        {item.postText}
+                    </Text>
+                    {item.postMedia.split(".").pop() == "mp4" ?
+                        <Video source={{ uri: 'https://d2tlu2bncpo1ch.cloudfront.net/' + `${item.postMedia}` }} controls={true} style={{ width: responsiveWidth(86), height: responsiveHeight(22), borderRadius: 10, marginVertical: 10 }} />
+                        // <Card.Cover
+                        //     style={{ borderRadius: 10, marginVertical: 10 }}
+                        //     source={{ uri: 'https://d2tlu2bncpo1ch.cloudfront.net/' + `${item.postMedia}` }} />
+                        : <Card.Cover
+                            style={{ borderRadius: 10, marginVertical: 10 }}
+                            source={{ uri: 'https://d2tlu2bncpo1ch.cloudfront.net/' + `${item.postMedia}` }}
+                        />}
+
+                    <View style={{ flexDirection: 'row' }}>
+                        <View style={{ flexDirection: 'row' }}>
+                            <TouchableOpacity onPress={() => _onLike(item._id, item.isLiked)}>
+                                <View style={{ flexDirection: 'row', backgroundColor: '#152D68', borderRadius: 12, padding: 2, paddingLeft: 5, paddingRight: 5, alignItems: 'center' }}>
+                                    <IonIcon name="ios-heart-outline" size={18} color={'white'} />
+                                    <Text style={{ color: 'white', fontSize: 12, marginLeft: 2, fontFamily: `${GlobalFont}` }}>{item?.likeUserIds?.length}</Text>
+                                </View>
+                            </TouchableOpacity>
+                            <Text>{'  '}</Text>
+                            <TouchableOpacity onPress={() => { openPanel(item._id); setDataComments(item.comments) }}>
+                                <View style={{ flexDirection: 'row', padding: 2, paddingLeft: 5, paddingRight: 5, alignItems: 'center' }}>
+                                    <MaterialCommunityIcons name="message-reply-text" size={18} />
+                                    <Text style={{ fontSize: 12, marginLeft: 2, fontFamily: `${GlobalFont}` }}>{item.comments.length}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={{ marginLeft: 'auto' }}>
+                            <IonIcon name="ios-share-social" size={15} />
+                        </View>
+                    </View>
+                </View>
+            </Card>
+        )
+    }
+    return (
+        <View>
+            <View style={styles.container}>
+                {loading && <Spinner
+                    visible={loading}
+                    size={'large'}
+                />}
+            </View>
+            <View>
+                <AppBackGroundImage>
+                    <SafeAreaView>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 12, alignItems: 'center' }}>
+                            <View>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => navigation.goBack()}
+                                >
+                                    <SvgXml xml={BackButton} />
+                                </TouchableOpacity>
+                            </View>
+                            <View style={{ marginLeft: 'auto', marginRight: 'auto' }}>
+                                <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 15, fontFamily: `${GlobalFont}` }}>Posts</Text>
+                            </View>
+                        </View>
+                    </SafeAreaView>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View style={styles.mainview}>
+                            <FlatList
+                                data={MyAllPost}
+                                showsVerticalScrollIndicator={false}
+                                renderItem={({ item, index }) =>
+                                    renderMyAllPost(item, index)
+                                }
+                                initialScrollIndex={index}
+                                // keyExtractor={item => item}
+                                onEndReachedThreshold={0.9}
+                            />
+                        </View>
+                    </ScrollView>
+                </AppBackGroundImage>
+                <SwipeablePanel  {...panelProps} isActive={isPanelActive} >
+                    {dataComments?.map((item) => {
+                        return (
+                            <View style={{ padding: 15 }}>
+                                <View style={{ flexDirection: 'row' }}>
+                                    <View
+                                        style={{
+                                            height: 50,
+                                            width: 50,
+                                            borderWidth: 1.5,
+                                            borderRadius: 10,
+                                            borderColor: '#8E8F8F',
+                                            borderStyle: 'dashed',
+                                            marginRight: 10,
+                                        }}>
+                                    </View>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            width: '80%',
+                                        }}>
+                                        <View>
+                                            <View style={{ flexDirection: 'row', marginBottom: 5 }}>
+                                                <Text style={{ fontFamily: `${GlobalFont}` }}>{item.userId.firstName} {""} {item.userId.lastName} {'.'} </Text>
+                                                <Text style={{ color: 'grey', fontFamily: `${GlobalFont}` }}>{moment(item.commentAt).format("DD/MM/YYYY")}</Text>
+                                            </View>
+                                            <Text style={{ color: 'grey', fontSize: 11, fontFamily: `${GlobalFont}`, marginBottom: 5 }}>
+                                                {item.commentText}
+                                            </Text>
+                                            <Text style={{ fontFamily: `${GlobalFont}` }}>Like | Reply</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                                {dataComments[!dataComments.length - 1] && <View style={styles.line}></View>}
+                            </View>
+                        )
+                    })}
+
+                    <View style={{ top: 0, justifyContent: 'center', alignItems: 'center' }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                // borderWidth: 1,
+                                borderRadius: 20,
+                                padding: 5,
+                                backgroundColor: '#EFF0FF',
+                                marginTop: 20,
+                                width: 350,
+
+                            }}>
+                            <TextInput
+                                style={styles.input1}
+                                onChangeText={(commentText) => setCommentText(commentText)}
+                                value={commentText}
+                                placeholder="Type your message"
+                                multiline={true}
+                            />
+                            <TouchableOpacity onPress={() => _onComment()}>
+                                <View style={{
+                                    justifyContent: 'center', alignItems: 'center', backgroundColor: '#143376', marginRight: 6, width: 50,
+                                    height: 40, borderRadius: 18,
+                                }}>
+                                    <Feather name="send" size={20} color="#fff" />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </SwipeablePanel>
+            </View>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    mainview: {
+        alignContent: 'center',
+        paddingLeft: 15,
+        paddingRight: 15,
+    },
+    whiteview: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+    },
+    textTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    logoimage: {
+        resizeMode: 'contain',
+        height: 120,
+    },
+    signupbtn: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    input: {
+        backgroundColor: 'white',
+        flex: 1,
+        height: 55,
+        fontSize: 15,
+    },
+    btnPrimary: {
+        backgroundColor: '#152c69',
+        height: 50,
+        borderRadius: 5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    backbtn: {
+        width: 50,
+        height: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    input1: {
+        flex: 1,
+        backgroundColor: '#EFF0FF',
+        width: responsiveScreenWidth(62)
+    },
+    line: {
+        height: 1,
+        width: '100%',
+        marginTop: 12,
+        marginBottom: 12,
+        backgroundColor: '#a5a5a5',
+    },
+    content: {
+        padding: 16,
+        backgroundColor: 'pink',
+        borderRadius: 8,
+    },
+    arrow: {
+        borderTopColor: 'pink',
+    },
+    background: {
+        backgroundColor: 'rgba(0, 0, 255, 0.5)',
+    },
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F8F8F8',
+        opacity: 1,
+        position: 'absolute',
+        zIndex: 1111
+    },
+});
+
+export default Posts;

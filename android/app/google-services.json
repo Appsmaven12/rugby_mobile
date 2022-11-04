@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "490909861188",
+    "project_id": "rugby-factory",
+    "storage_bucket": "rugby-factory.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:490909861188:android:86e99da40e08dafeb94311",
+        "android_client_info": {
+          "package_name": "com.rugbyfactory"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "490909861188-b1tvvrk3n7snbe3qbiectfgd02ai9v60.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rugbyfactory",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "490909861188-a1bjeuo42mc7a92v6t68kjb55npup6hm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA51OpMdM4gTjKcDtwULynwfuDD5QsW6x4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "490909861188-a1bjeuo42mc7a92v6t68kjb55npup6hm.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "490909861188-prjgmf245o3ko04jpvlo2vkr3g7hqlai.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rugbyfactory"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
